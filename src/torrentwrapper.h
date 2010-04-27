@@ -133,13 +133,7 @@ private:
         TorrenthandleInfoMap;
 	MutexWrapper<TorrenthandleInfoMap> m_handleInfo_map;
 
-	TorrenthandleInfoMap GetHandleInfoMap()
-	{
-		ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
-		return l_torrent_table.Get();
-	}
-
-    wxString m_buffer;
+	wxString m_buffer;
 
     bool ingame;
     unsigned int m_timer_count;
