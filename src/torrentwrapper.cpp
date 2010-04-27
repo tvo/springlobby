@@ -299,7 +299,7 @@ void TorrentWrapper::UpdateSettings()
 
 bool TorrentWrapper::IsFileInSystem( const wxString& name )
 {
-	const TorrenthandleInfoMap& infomap = GetHandleInfoMap();
+	const TorrenthandleInfoMap infomap = GetHandleInfoMap();
 	TorrenthandleInfoMap::const_iterator it = infomap.begin();
 	for ( ; it != infomap.end(); ++it )
 	{
@@ -314,7 +314,7 @@ bool TorrentWrapper::IsFileInSystem( const wxString& name )
 
 bool TorrentWrapper::RemoveTorrentByName( const wxString& name )
 {
-	TorrenthandleInfoMap& infomap = GetHandleInfoMap();
+	TorrenthandleInfoMap infomap = GetHandleInfoMap();
 	TorrenthandleInfoMap::iterator it = infomap.begin();
 	for ( ; it != infomap.end(); ++it )
     {
@@ -324,6 +324,7 @@ bool TorrentWrapper::RemoveTorrentByName( const wxString& name )
         {
             m_torr->remove_torrent( handle );
 			infomap.erase( it++ );
+			SetHandleInfoMap( infomap );
             return true;
         }
     }
@@ -510,7 +511,7 @@ std::map<wxString,TorrentInfos> TorrentWrapper::CollectGuiInfos()
     std::map<wxString,TorrentInfos> ret;
     try
     {
-		const TorrenthandleInfoMap& infomap = GetHandleInfoMap();
+		const TorrenthandleInfoMap infomap = GetHandleInfoMap();
         TorrentInfos globalinfos;
         libtorrent::session_status session_status = m_torr->status();
         globalinfos.downloadstatus = P2P::leeching;
@@ -521,7 +522,6 @@ std::map<wxString,TorrentInfos> TorrentWrapper::CollectGuiInfos()
         globalinfos.filesize = 0;
         ret[wxString(_T("global"))] = globalinfos;
 
-		const TorrenthandleVector torrentList = m_torr->get_torrents();
 		for ( TorrenthandleInfoMap::const_iterator i = infomap.begin(); i != infomap.end(); ++i )
         {
 			try {
@@ -558,7 +558,7 @@ std::map<wxString,TorrentInfos> TorrentWrapper::CollectGuiInfos()
 
 void TorrentWrapper::RemoveInvalidTorrents()
 {
-	TorrenthandleInfoMap& infomap = GetHandleInfoMap();
+	TorrenthandleInfoMap infomap = GetHandleInfoMap();
 	TorrenthandleInfoMap::iterator it = infomap.begin();
 	for ( ; it != infomap.end(); )
     {
@@ -573,11 +573,12 @@ void TorrentWrapper::RemoveInvalidTorrents()
         else
             ++it;
     }
+	SetHandleInfoMap( infomap );
 }
 
 void TorrentWrapper::ClearFinishedTorrents()
 {
-	TorrenthandleInfoMap& infomap = GetHandleInfoMap();
+	TorrenthandleInfoMap infomap = GetHandleInfoMap();
 	TorrenthandleInfoMap::iterator it = infomap.begin();
 	for ( ; it != infomap.end();  )
     {
@@ -594,6 +595,7 @@ void TorrentWrapper::ClearFinishedTorrents()
         else
             ++it;
     }
+	SetHandleInfoMap( infomap );
 }
 
 void DisplayError( const wxString& resourcename, TorrentWrapper::DownloadRequestStatus status )
