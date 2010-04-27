@@ -92,48 +92,6 @@ P2P::FileStatus TorrentWrapper::getP2PStatusFromHandle( const libtorrent::torren
 	return P2P::leeching;
 }
 
-TorrentMaintenanceThread::TorrentMaintenanceThread( TorrentWrapper* parent )
-	: m_stop_thread( false ),
-	m_parent( *parent )
-{
-}
-
-void TorrentMaintenanceThread::Init()
-{
-	Create();
-	SetPriority( WXTHREAD_MIN_PRIORITY );
-	Run();
-}
-
-void TorrentMaintenanceThread::Stop()
-{
-	m_stop_thread = true;
-}
-
-void* TorrentMaintenanceThread::Entry()
-{
-	m_parent.ResumeFromList();
-	while ( !TestDestroy() )
-	{
-		if( !Sleep( 2000 ) ) break;
-		{
-			//just to be on the safe sade in case anything slipped thru
-			try {
-				//  DON'T alter function call order here or bad things may happend like locust, earthquakes or raptor attack
-				m_parent.RemoveInvalidTorrents();
-				m_parent.HandleCompleted();
-			}
-			catch ( ... )
-			{}
-		}
-	}
-	return 0;
-}
-
-bool TorrentMaintenanceThread::TestDestroy()
-{
-	return Thread::TestDestroy() || m_stop_thread;
-}
 
 TorrentWrapper& torrent()
 {
@@ -146,7 +104,6 @@ TorrentWrapper& torrent()
 TorrentWrapper::TorrentWrapper():
         ingame(false),
         m_timer_count(0),
-        m_maintenance_thread(this),
         m_started(false)
 {
     wxLogMessage(_T("TorrentWrapper::TorrentWrapper()"));
@@ -195,7 +152,6 @@ TorrentWrapper::TorrentWrapper():
         }
     #endif
     UpdateSettings();
-    m_maintenance_thread.Init();
 	m_info_download_thread.Create();
 	m_info_download_thread.SetPriority( WXTHREAD_MIN_PRIORITY );
 	m_info_download_thread.Run();
@@ -205,7 +161,6 @@ TorrentWrapper::TorrentWrapper():
 TorrentWrapper::~TorrentWrapper()
 {
     wxLogDebugFunc( wxEmptyString );
-    m_maintenance_thread.Stop();
 	m_info_download_thread.Wait();
 	m_torr->pause();
 	ClearFinishedTorrents();
@@ -399,10 +354,6 @@ void TorrentWrapper::SetIngameStatus( bool status )
 {
     if ( status == ingame ) return; // no change needed
     ingame = status;
-    if ( ingame )
-        m_maintenance_thread.Pause();
-    else
-        m_maintenance_thread.Resume();
 
     try
     {
@@ -515,6 +466,19 @@ void TorrentWrapper::HandleCompleted()
 
 std::map<wxString,TorrentInfos> TorrentWrapper::CollectGuiInfos()
 {
+	// Moved these here because of the recurring deadlocks with the separate torrent maintenance thread.
+
+	if (!ingame) {
+		//just to be on the safe sade in case anything slipped thru
+		try {
+			//  DON'T alter function call order here or bad things may happend like locust, earthquakes or raptor attack
+			RemoveInvalidTorrents();
+			HandleCompleted();
+		}
+		catch ( ... )
+		{}
+	}
+
     std::map<wxString,TorrentInfos> ret;
     try
     {

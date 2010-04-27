@@ -56,21 +56,6 @@ struct TorrentInfos
 };
 
 
-class TorrentMaintenanceThread : public Thread
-{
-	public:
-		TorrentMaintenanceThread( TorrentWrapper* parent );
-		void Init();
-		void Stop();
-		void* Entry();
-
-	protected:
-		bool TestDestroy();
-
-		bool m_stop_thread;
-		TorrentWrapper& m_parent;
-};
-
 class TorrentWrapper;
 class ResourceInfoWorkItem : public WorkItem {
 public:
@@ -139,8 +124,6 @@ private:
     unsigned int m_timer_count;
 
     wxArrayString m_tracker_urls;
-
-    TorrentMaintenanceThread m_maintenance_thread;
 
     libtorrent::session* m_torr;
 
