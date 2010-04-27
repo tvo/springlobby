@@ -299,7 +299,9 @@ void TorrentWrapper::UpdateSettings()
 
 bool TorrentWrapper::IsFileInSystem( const wxString& name )
 {
-	const TorrenthandleInfoMap infomap = GetHandleInfoMap();
+	ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
+	const TorrenthandleInfoMap& infomap = l_torrent_table.Get();
+
 	TorrenthandleInfoMap::const_iterator it = infomap.begin();
 	for ( ; it != infomap.end(); ++it )
 	{
@@ -314,7 +316,9 @@ bool TorrentWrapper::IsFileInSystem( const wxString& name )
 
 bool TorrentWrapper::RemoveTorrentByName( const wxString& name )
 {
-	TorrenthandleInfoMap infomap = GetHandleInfoMap();
+	ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
+	TorrenthandleInfoMap& infomap = l_torrent_table.Get();
+
 	TorrenthandleInfoMap::iterator it = infomap.begin();
 	for ( ; it != infomap.end(); ++it )
     {
@@ -324,7 +328,6 @@ bool TorrentWrapper::RemoveTorrentByName( const wxString& name )
         {
             m_torr->remove_torrent( handle );
 			infomap.erase( it++ );
-			SetHandleInfoMap( infomap );
             return true;
         }
     }
@@ -378,7 +381,10 @@ TorrentWrapper::DownloadRequestStatus TorrentWrapper::AddTorrent( const PlasmaRe
             return no_seeds_found;
 
         libtorrent::torrent_handle tor = m_torr->add_torrent(p);
-		GetHandleInfoMap()[info] = tor;
+        {
+            ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
+            l_torrent_table.Get()[info] = tor;
+        }
         for ( size_t i = 0; i < num_webseeds; ++ i )
             tor.add_url_seed( STD_STRING( info.m_webseeds[i] ) );
         return success;
@@ -450,10 +456,11 @@ void TorrentWrapper::HandleCompleted()
 {
 	int num_completed = 0;
 	{
-	TorrenthandleInfoMap infohandle = GetHandleInfoMap();
-	TorrenthandleInfoMap::iterator it = infohandle.begin();
+	ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
+	const TorrenthandleInfoMap& infomap = l_torrent_table.Get();
 
-	for ( ; it != infohandle.end(); ++it )
+	TorrenthandleInfoMap::const_iterator it = infomap.begin();
+	for ( ; it != infomap.end(); ++it )
 	{
 		PlasmaResourceInfo info = it->first;
 		libtorrent::torrent_handle handle = it->second;
@@ -511,7 +518,9 @@ std::map<wxString,TorrentInfos> TorrentWrapper::CollectGuiInfos()
     std::map<wxString,TorrentInfos> ret;
     try
     {
-		const TorrenthandleInfoMap infomap = GetHandleInfoMap();
+    	ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
+    	const TorrenthandleInfoMap& infomap = l_torrent_table.Get();
+
         TorrentInfos globalinfos;
         libtorrent::session_status session_status = m_torr->status();
         globalinfos.downloadstatus = P2P::leeching;
@@ -558,7 +567,9 @@ std::map<wxString,TorrentInfos> TorrentWrapper::CollectGuiInfos()
 
 void TorrentWrapper::RemoveInvalidTorrents()
 {
-	TorrenthandleInfoMap infomap = GetHandleInfoMap();
+	ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
+	TorrenthandleInfoMap& infomap = l_torrent_table.Get();
+
 	TorrenthandleInfoMap::iterator it = infomap.begin();
 	for ( ; it != infomap.end(); )
     {
@@ -573,12 +584,13 @@ void TorrentWrapper::RemoveInvalidTorrents()
         else
             ++it;
     }
-	SetHandleInfoMap( infomap );
 }
 
 void TorrentWrapper::ClearFinishedTorrents()
 {
-	TorrenthandleInfoMap infomap = GetHandleInfoMap();
+	ScopedLocker<TorrenthandleInfoMap> l_torrent_table(m_handleInfo_map);
+	TorrenthandleInfoMap& infomap = l_torrent_table.Get();
+
 	TorrenthandleInfoMap::iterator it = infomap.begin();
 	for ( ; it != infomap.end();  )
     {
@@ -595,7 +607,6 @@ void TorrentWrapper::ClearFinishedTorrents()
         else
             ++it;
     }
-	SetHandleInfoMap( infomap );
 }
 
 void DisplayError( const wxString& resourcename, TorrentWrapper::DownloadRequestStatus status )
