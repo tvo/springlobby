@@ -435,7 +435,6 @@ void TorrentWrapper::HandleCompleted()
 					wxString msg = wxString::Format( _("File copy from %s to %s failed.\nPlease copy manually and reload maps/mods afterwards"),
 								source_path.c_str(), dest_filename.c_str() );
 					wxLogError( _T("DL: File copy from %s to %s failed."), source_path.c_str(), dest_filename.c_str() );
-					wxMutexGuiLocker locker;
 					#ifdef __WXMSW__
 						UiEvents::StatusData data( msg, 1 );
 						UiEvents::GetStatusEventSender( UiEvents::addStatusMessage ).SendEvent( data );
@@ -449,7 +448,6 @@ void TorrentWrapper::HandleCompleted()
 				{
 					wxRemoveFile( source_path );
 					wxLogDebug( _T("DL complete: %s"), info.m_name.c_str() );
-					wxMutexGuiLocker locker;
 					UiEvents::StatusData data( wxString::Format( _("Download completed: %s"), info.m_name.c_str() ), 1 );
 					UiEvents::GetStatusEventSender( UiEvents::addStatusMessage ).SendEvent( data );
 					num_completed++;
